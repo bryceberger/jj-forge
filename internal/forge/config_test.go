@@ -3,6 +3,7 @@ package forge
 import (
 	"context"
 	"fmt"
+	"slices"
 	"sync"
 	"testing"
 
@@ -57,15 +58,16 @@ func (m *mockClient) Run(ctx context.Context, args ...string) (string, error) {
 		value := args[4]
 
 		// Extract the key name after "forge."
-		if key == "forge.reviews" {
+		switch key {
+		case "forge.reviews":
 			m.config["reviews"] = value
-		} else if key == "forge.checks" {
+		case "forge.checks":
 			m.config["checks"] = value
-		} else if key == "forge.default-reviewer" {
+		case "forge.default-reviewer":
 			m.config["default-reviewer"] = value
-		} else if key == "forge.check-command" {
+		case "forge.check-command":
 			m.config["check-command"] = value
-		} else {
+		default:
 			m.config[key] = value
 		}
 		return "", nil
@@ -235,20 +237,20 @@ func TestGetCheckCommand(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetCheckCommand failed: %v", err)
 	}
-	if cmd != "" {
+	if cmd != nil {
 		t.Errorf("expected empty command, got %q", cmd)
 	}
 
 	// Test: config with check-command
 	mock2 := newMockClient()
-	mock2.config["check-command"] = "\"echo hello\""
+	mock2.config["check-command"] = "['echo', 'hello']"
 	mgr2 := NewConfigManager(mock2)
 	cmd, err = mgr2.GetCheckCommand()
 	if err != nil {
 		t.Fatalf("GetCheckCommand failed: %v", err)
 	}
-	if cmd != "echo hello" {
-		t.Errorf("expected command 'echo hello', got %q", cmd)
+	if !slices.Equal(cmd, []string{"echo", "hello"}) {
+		t.Errorf("expected command [\"echo\" \"hello\"], got %q", cmd)
 	}
 }
 
